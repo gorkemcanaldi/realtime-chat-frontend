@@ -1,3 +1,4 @@
+import { logout } from "../components/Logout";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -43,6 +44,7 @@ function Room() {
                    text-xl text-center 
                    rounded-xl 
                    border border-indigo-900"
+          onClick={() => logout(navigate)}
         >
           Log out
         </button>

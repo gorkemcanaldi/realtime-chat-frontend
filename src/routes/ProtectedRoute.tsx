@@ -1,11 +1,9 @@
+import { socket } from "../socket/socket";
 import { ReactElement } from "react";
-import { Navigate } from "react-router-dom";
 
 export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  if (!socket.connected) {
+    socket.connect();
   }
 
   return children;

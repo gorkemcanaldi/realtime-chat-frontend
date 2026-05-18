@@ -22,9 +22,9 @@ function Login() {
     try {
       const res = await loginUser(data);
       if (res) {
-        localStorage.setItem("token", res.data.accessToken);
         socket.disconnect();
         socket.connect();
+        localStorage.setItem("user", JSON.stringify(res.user));
         toast.success("login success.");
         navigate("/room");
       }

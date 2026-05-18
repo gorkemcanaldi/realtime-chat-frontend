@@ -1,22 +1,14 @@
 import { socket } from "../socket/socket";
-import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { jwtDecode } from "jwt-decode";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { logout } from "../components/Logout";
-type Message = {
-  message: string;
-  username: string;
-  userId: string;
-};
+import { RoomUser, Message } from "../types/socket";
 function Chat() {
   const [params] = useSearchParams();
   const roomId = params.get("roomId");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<RoomUser[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
-
-  const token = localStorage.getItem("token")!;
-  const myUserId = jwtDecode<{ id: string }>(token).id;
 
   const navigate = useNavigate();
   useEffect(() => {
@@ -24,21 +16,27 @@ function Chat() {
 
     const handleRoomMessage = (e: Message[]) => setMessages(e);
     const handleReceive = (m: Message) => setMessages((p) => [...p, m]);
-
+    const handleUsers = (users: RoomUser[]) => setUsers(users);
     socket.emit("join_room", roomId);
 
     socket.on("room_message", handleRoomMessage);
 
-    socket.on("room_users", (u) => setUsers(u));
+    socket.on("room_users", handleUsers);
 
     socket.on("receive_message", handleReceive);
 
     return () => {
       socket.off("room_message", handleRoomMessage);
       socket.off("receive_message", handleReceive);
-      socket.off("room_users");
+      socket.off("room_users", handleUsers);
     };
   }, [roomId]);
+  const user = localStorage.getItem("user");
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  const myUserId = JSON.parse(user).id;
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -54,11 +52,19 @@ function Chat() {
     <div className="flex items-center justify-center h-full">
       <div className="w-full h-[600px] bg-white ">
         <div className="w-full h-16 bg-gray-700 flex items-center p-2 flex justify-between">
-          <div className="w-12 h-12 bg-white rounded-full text-red justify-center font-bold flex items-center"></div>
+          <div className="flex items-center gap-3">
+            <span
+              className="text-2xl text-white"
+              onClick={() => navigate("/room")}
+            >
+              {"<"}
+            </span>
+            <div className="w-12 h-12 bg-white rounded-full text-red justify-center font-bold flex items-center"></div>
+          </div>{" "}
           <span>
             {users.map((u) => (
               <span
-                key={u.userId}
+                key={u.socketId}
                 className="text-sm bg-white ml-1 px-2 rounded"
               >
                 {u.username}
@@ -73,13 +79,13 @@ function Chat() {
           </button>
         </div>
         <div className="w-full h-[490px] overflow-y-auto">
-          {messages.map((msg, i) => (
+          {messages.map((msg) => (
             <div
-              key={i}
+              key={msg._id}
               className={`${myUserId === msg.userId ? "flex justify-end" : ""}`}
             >
               <div
-                className={`${myUserId === msg.userId ? "bg-green-600" : "bg-blue-600"} w-1/2 text-white text-sm m-2 rounded-br-none rounded-xl p-2`}
+                className={`${myUserId === msg.userId ? "bg-green-600 rounded-br-none" : "bg-blue-600 rounded-bl-none"} w-1/2 text-white text-sm m-2  rounded-xl p-2`}
               >
                 <div>{msg.message}</div>
                 <div className="w-full flex justify-end text-xs text-black">
@@ -90,7 +96,7 @@ function Chat() {
           ))}
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full z-99999999999">
+        <div className="absolute bottom-0 left-0 w-full flex border-t bg-white">
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
